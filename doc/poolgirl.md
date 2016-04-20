@@ -84,7 +84,8 @@ Example :
 
 ```
 
- poolgirl:add_pool(test, 5, 20, {my_server, start_link, [{127,0,0,1}, 9092]}).
+ poolgirl:add_pool(test, {my_server, start_link, [{127,0,0,1}, 9092]}, #{size => 2,
+                                                                         chunk_size => 4}).
 ```
 
 <a name="assigned-1"></a>

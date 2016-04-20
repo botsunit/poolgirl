@@ -148,9 +148,9 @@ assigned(Pool) ->
 % @hidden
 init([]) ->
   {ok, #state{
-          pools = ets:new(pools, [% private, TODO
+          pools = ets:new(pools, [private,
                                   {keypos, #pool.name}]),
-          workers = ets:new(workers, [% private, TODO
+          workers = ets:new(workers, [private,
                                       {keypos, #worker.pid}])}}.
 
 % @hidden
@@ -175,8 +175,19 @@ handle_call({add_pool, Name, {Module, Function, Args} = MFArgs, Options},
       {reply, add_workers(Name, State), State};
     Error -> {reply, Error, State}
   end;
-handle_call({remove_pool, _Name}, _From, State) ->
-	{reply, ignored, State}; % TODO
+handle_call({remove_pool, Name}, _From, #state{pools = Pools} = State) ->
+  case ets:lookup(Pools, Name) of
+    [] ->
+      {reply, {error, unknow_pool}, State};
+    _ ->
+      case poolgirl_sup:remove_pool(Name) of
+        ok ->
+          _ = ets:delete(Pools, Name),
+          {reply, ok, State};
+        Error ->
+          {reply, Error, State}
+      end
+  end;
 handle_call({checkout, Name}, _From, #state{pools = Pools, workers = Workers} = State) ->
   case ets:lookup(Pools, Name) of
     [] ->

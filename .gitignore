@@ -1,0 +1,16 @@
+.DS_Store
+deps
+ebin
+log
+*.beam
+*.mnesia
+*.txt*
+*.swp*
+erl_crash.dump
+.eunit
+ext
+.rebar
+.erlang.mk
+*.d
+test/eunit/
+test/ct/

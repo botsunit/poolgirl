@@ -25,8 +25,8 @@ add_pool(Name, {Module, Function, _}) ->
       {ok, PID};
     {ok, PID, _Info} ->
       {ok, PID};
-    {error, {already_started, _}} ->
-      {error, already_started};
+    {error, {already_started, PID}} ->
+      {ok, PID};
     E ->
       E
   end.

@@ -194,7 +194,7 @@ handle_call({checkout, Name}, _From, #state{pools = Pools, workers = Workers} = 
     [] ->
       {reply, {error, unknow_pool}, State};
     _ ->
-      case ets:match(Workers, #worker{assigned = false, pid = '$1', _ = '_'}) of
+      case ets:match(Workers, #worker{assigned = false, pool = Name, pid = '$1', _ = '_'}) of
         [] ->
           _ = add_workers(Name, State),
           {reply, {error, no_available_worker}, State};

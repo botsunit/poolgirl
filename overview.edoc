@@ -80,7 +80,7 @@ code_change(_OldVsn, Socket, _Extra) ->
 <h3>Contributing</h3>
 
 <ol>
-  <li>Fork it ( https://github.com/botsunit/kafe/fork )</li>
+  <li>Fork it ( https://github.com/botsunit/poolgirl/fork )</li>
   <li>Create your feature branch (<tt>git checkout -b my-new-feature</tt>)</li>
   <li>Commit your changes (<tt>git commit -am 'Add some feature'</tt>)</li>
   <li>Push to the branch (<tt>git push origin my-new-feature</tt>)</li>

@@ -1,25 +1,21 @@
-PROJECT = poolgirl
+.PHONY: doc
+REBAR = ./rebar3
 
-DEP_PLUGINS = mix.mk
-BUILD_DEPS = mix.mk
-ELIXIR_VERSION = ~> 1.2
-dep_mix.mk = git https://github.com/botsunit/mix.mk.git master
+compile:
+	@$(REBAR) compile
 
-DOC_DEPS = edown
-dep_edown = git https://github.com/botsunit/edown.git master
+tests:
+	@$(REBAR) eunit
 
-include erlang.mk
+doc:
+	@$(REBAR) as doc edoc
 
-EDOC_OPTS = {doclet, edown_doclet} \
-						, {app_default, "http://www.erlang.org/doc/man"} \
-						, {source_path, ["src"]} \
-						, {overview, "overview.edoc"} \
-						, {stylesheet, ""} \
-						, {image, ""} \
-						, {top_level_readme, {"./README.md", "https://github.com/botsunit/$(PROJECT)"}}
+elixir:
+	@$(REBAR) elixir generate_mix
+	@$(REBAR) elixir generate_lib
 
-dev: app tests
-	@erl -pa ebin include deps/*/ebin deps/*/include test
+dist: compile tests elixir doc
 
-release: app mix.exs
+distclean:
+	@rm -rf _build rebar.lock mix.lock test/eunit
 

@@ -1,7 +1,18 @@
 {application, poolgirl, [
-	{description, "Erlang worker pool"},
-	{vsn, "0.0.3"},
-	{modules, []},
-	{applications, [kernel,stdlib]},
-	{mod, {poolgirl_app, []}}
+	  {description, "Erlang worker pool"}
+	, {vsn, "0.1.0"}
+	, {modules, []}
+	, {applications, [kernel,stdlib]}
+	, {mod, {poolgirl_app, []}}
+
+  , {maintainers, ["Gregoire Lejeune"]}
+  , {licenses, ["BSD-3"]}
+  , {links, [{"Github", "https://github.com/botsunit/bucs"}]}
+  , {files, ["src/*"
+             , "Makefile"
+             , "README.md"
+             , "rebar.config"
+             , "rebar.lock"
+             , "mix.exs"]}
+  , {build_tools, ["rebar3", "mix", "make"]}
 ]}.

@@ -7,7 +7,7 @@
 
   , {maintainers, ["Gregoire Lejeune"]}
   , {licenses, ["BSD-3"]}
-  , {links, [{"Github", "https://github.com/botsunit/bucs"}]}
+  , {links, [{"Github", "https://github.com/botsunit/poolgirl"}]}
   , {files, ["src/*"
              , "Makefile"
              , "README.md"

@@ -1,6 +1,6 @@
 {application, poolgirl, [
 	  {description, "Erlang worker pool"}
-	, {vsn, "0.1.0"}
+	, {vsn, "0.1.1"}
 	, {modules, []}
 	, {applications, [kernel,stdlib]}
 	, {mod, {poolgirl_app, []}}

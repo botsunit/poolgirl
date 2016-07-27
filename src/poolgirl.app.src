@@ -9,6 +9,8 @@
   , {licenses, ["BSD-3"]}
   , {links, [{"Github", "https://github.com/botsunit/poolgirl"}]}
   , {files, ["src/*"
+             , "lib/*"
+             , "bu.mk"
              , "Makefile"
              , "README.md"
              , "rebar.config"

@@ -11,7 +11,8 @@
          checkout/1,
          checkin/1,
          size/1,
-         assigned/1
+         assigned/1,
+         transaction/2
         ]).
 
 %% gen_server.
@@ -26,6 +27,7 @@
 -define(CLEAN_INTERVAL, 60000).
 -define(INITIAL_SIZE, 5).
 -define(CHUNK_SIZE, 10).
+-define(MAX_SIZE, infinity).
 
 -record(state, {
           workers,
@@ -50,6 +52,7 @@
           chunk_size,
           timer,
           max_age,
+          max_size,
           clean_interval
          }).
 
@@ -57,6 +60,7 @@
 -type pool_options() :: #{size => integer(),
                           chunk_size => integer(),
                           max_age => integer(),
+                          max_size => integer(),
                           clean_interval => integer()}.
 
 % @hidden
@@ -76,8 +80,11 @@ add_pool(Name, MFArgs) ->
 % <li><tt>size :: integer()</tt> : Minimum pool size (Default : 5).</li>
 % <li><tt>chunk_size :: integer()</tt> : Chunk size (Default : 10).</li>
 % <li><tt>max_age :: integer()</tt> : Maximum age (in ms) of unused workers before destruction (Default : 120000).</li>
+% <li><tt>max_size :: integer()</tt> : Maximum number or worker in the pool (Default: infinity).</li>
 % <li><tt>clean_interval :: integer()</tt> : Interval (in ms) between each cleanup (Default : 60000).</li>
 % </ul>
+%
+% <i>Warning</i> : If <tt>max_size =&lt; size + chunk_size</tt> then <tt>max_size</tt> is set to <tt>size + chunk_size</tt>
 %
 % Example : 
 % <pre>
@@ -144,6 +151,27 @@ size(Pool) ->
 assigned(Pool) ->
   gen_server:call(?MODULE, {assigned, Pool}).
 
+% @doc
+% Checkout a worker from the given pool and execute a function with the worker as parameter.
+%
+% Example:
+% <pre>
+% poolgirl:transaction(test, fun(Worker) ->
+%   gen_server(Worker, {do, Something})
+% end).
+% </pre>
+% @end
+-spec transaction(atom(), fun((Worker :: pid()) -> Result :: term())) -> Result :: term() | {error, term()}.
+transaction(Pool, Fun) when is_function(Fun, 1) ->
+  case checkout(Pool) of
+    {ok, Worker} ->
+      Result = erlang:apply(Fun, [Worker]),
+      _ = checkin(Worker),
+      Result;
+    Error ->
+      Error
+  end.
+
 %% gen_server.
 
 % @hidden
@@ -161,6 +189,14 @@ handle_call({add_pool, Name, {Module, Function, Args} = MFArgs, Options},
   ChunkSize = maps:get(chunk_size, Options, ?CHUNK_SIZE),
   MaxAge = maps:get(max_age, Options, ?MAX_AGE),
   CleanInterval = maps:get(clean_interval, Options, ?CLEAN_INTERVAL),
+  MaxSize = case maps:get(max_size, Options, ?MAX_SIZE) of
+              infinity -> 
+                infinity;
+              Max when Max =< (Size + ChunkSize) ->
+                Size + ChunkSize;
+              Max ->
+                Max
+            end,
   case poolgirl_sup:add_pool(Name, MFArgs) of
     {ok, SupervisorPid} ->
       ets:insert(Pools, #pool{name = Name,
@@ -170,6 +206,7 @@ handle_call({add_pool, Name, {Module, Function, Args} = MFArgs, Options},
                               args = Args,
                               initial_size = Size,
                               max_age = MaxAge,
+                              max_size = MaxSize,
                               clean_interval = CleanInterval,
                               timer = erlang:send_after(CleanInterval, self(), {clean, Name}),
                               chunk_size = ChunkSize}),
@@ -324,6 +361,7 @@ add_workers(Name, #state{pools = Pools, workers = Workers}) ->
   case ets:lookup(Pools, Name) of
     [#pool{supervisor = SupervisorPid,
            args = Args,
+           max_size = MaxSize,
            initial_size = InitialSize,
            chunk_size = ChunkSize}] ->
       Size = ets:match(Workers, #worker{pool = Name, _ = '_'}),
@@ -331,6 +369,7 @@ add_workers(Name, #state{pools = Pools, workers = Workers}) ->
       AddSize = if
                   length(Size) == 0 -> InitialSize;
                   length(Size) < InitialSize -> InitialSize - length(Size);
+                  is_integer(MaxSize) andalso length(Size) >= MaxSize -> 0;
                   length(PidsAssigned) == length(Size) -> ChunkSize;
                   true -> 0
                 end,

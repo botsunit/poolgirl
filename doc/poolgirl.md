@@ -28,7 +28,7 @@ mfargs() = {Module::atom(), Function::atom(), Args::list()}
 
 
 <pre><code>
-pool_options() = #{size =&gt; integer(), chunk_size =&gt; integer(), max_age =&gt; integer(), clean_interval =&gt; integer()}
+pool_options() = #{size =&gt; integer(), chunk_size =&gt; integer(), max_age =&gt; integer(), max_size =&gt; integer(), clean_interval =&gt; integer()}
 </code></pre>
 
 <a name="index"></a>
@@ -42,7 +42,8 @@ Return the list of assigned workers.</td></tr><tr><td valign="top"><a href="#che
 Checkin a worker.</td></tr><tr><td valign="top"><a href="#checkout-1">checkout/1</a></td><td> 
 Checkout a worker.</td></tr><tr><td valign="top"><a href="#remove_pool-1">remove_pool/1</a></td><td>
 Remove an existing pool.</td></tr><tr><td valign="top"><a href="#size-1">size/1</a></td><td> 
-Get a worker size and number of unassigned workers.</td></tr></table>
+Get a worker size and number of unassigned workers.</td></tr><tr><td valign="top"><a href="#transaction-2">transaction/2</a></td><td> 
+Checkout a worker from the given pool and execute a function with the worker as parameter.</td></tr></table>
 
 
 <a name="functions"></a>
@@ -77,8 +78,12 @@ Options :
 
 * `max_age :: integer()` : Maximum age (in ms) of unused workers before destruction (Default : 120000).
 
+* `max_size :: integer()` : Maximum number or worker in the pool (Default: infinity).
+
 * `clean_interval :: integer()` : Interval (in ms) between each cleanup (Default : 60000).
 
+
+_Warning_ : If `max_size =< size + chunk_size` then `max_size` is set to `size + chunk_size`
 
 Example :
 
@@ -173,5 +178,26 @@ Example:
 ```
 
  poolgirl:size(test).
+```
+
+<a name="transaction-2"></a>
+
+### transaction/2 ###
+
+<pre><code>
+transaction(Pool::atom(), Fun::fun((Worker::pid()) -&gt; Result::term())) -&gt; Result::term() | {error, term()}
+</code></pre>
+<br />
+
+
+Checkout a worker from the given pool and execute a function with the worker as parameter.
+
+Example:
+
+```
+
+ poolgirl:transaction(test, fun(Worker) ->
+   gen_server(Worker, {do, Something})
+ end).
 ```
 

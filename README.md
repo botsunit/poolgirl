@@ -11,6 +11,9 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire
 
 ### Usage ###
 
+
+#### Erlang ####
+
 ```
 
 1> application:start(poolgirl).
@@ -82,6 +85,26 @@ terminate(_Reason, #{socket := Socket}) ->
 
 code_change(_OldVsn, Socket, _Extra) ->
   {ok, Socket}.
+```
+
+
+#### Elixir ####
+
+With Elixir, use `Poolgirl` :
+
+```
+
+iex(1)> Application.start(:poolgirl)
+:ok
+iex(2)> Poolgirl.add_pool(:test, {MyClient, :start_link, [{127,0,0,1}, 1234]})
+{:ok,5}
+iex(3)> worker = Poolgirl.checkout(:test)
+#PID<0.89.0>
+iex(4)> GenServer.call(worker, request)
+:ok
+iex(5)> Poolgirl.checkin(worker)
+:ok
+
 ```
 
 

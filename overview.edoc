@@ -6,6 +6,8 @@
 
 <h3>Usage</h3>
 
+<h4>Erlang</h4>
+
 <pre>
 1> application:start(poolgirl).
 ok
@@ -75,6 +77,23 @@ terminate(_Reason, #{socket := Socket}) ->
 code_change(_OldVsn, Socket, _Extra) ->
   {ok, Socket}.
 
+</pre>
+
+<h4>Elixir</h4>
+
+With Elixir, use <tt>Poolgirl</tt> :
+
+<pre>
+iex(1)> Application.start(:poolgirl)
+:ok
+iex(2)> Poolgirl.add_pool(:test, {MyClient, :start_link, [{127,0,0,1}, 1234]})
+{:ok,5}
+iex(3)> worker = Poolgirl.checkout(:test)
+#PID&lt;0.89.0&gt;
+iex(4)> GenServer.call(worker, request)
+:ok
+iex(5)> Poolgirl.checkin(worker)
+:ok
 </pre>
 
 <h3>Contributing</h3>

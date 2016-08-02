@@ -66,7 +66,7 @@
 % @hidden
 -spec start_link() -> {ok, pid()}.
 start_link() ->
-	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+  gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 % @equiv add_pool(Name, MFArgs, #{})
 add_pool(Name, MFArgs) ->
@@ -86,7 +86,7 @@ add_pool(Name, MFArgs) ->
 %
 % <i>Warning</i> : If <tt>max_size =&lt; size + chunk_size</tt> then <tt>max_size</tt> is set to <tt>size + chunk_size</tt>
 %
-% Example : 
+% Example :
 % <pre>
 % poolgirl:add_pool(test, {my_server, start_link, [{127,0,0,1}, 9092]}, #{size => 2,
 %                                                                         chunk_size => 4}).
@@ -190,7 +190,7 @@ handle_call({add_pool, Name, {Module, Function, Args} = MFArgs, Options},
   MaxAge = maps:get(max_age, Options, ?MAX_AGE),
   CleanInterval = maps:get(clean_interval, Options, ?CLEAN_INTERVAL),
   MaxSize = case maps:get(max_size, Options, ?MAX_SIZE) of
-              infinity -> 
+              infinity ->
                 infinity;
               Max when Max =< (Size + ChunkSize) ->
                 Size + ChunkSize;
@@ -275,11 +275,11 @@ handle_call({assigned, Name}, _From, #state{pools = Pools, workers = Workers} = 
       {reply, {ok, lists:flatten(Assigned)}, State}
   end;
 handle_call(_Request, _From, State) ->
-	{reply, ignored, State}.
+  {reply, ignored, State}.
 
 % @hidden
 handle_cast(_Msg, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 % @hidden
 handle_info({'DOWN', MRef, _, _, _}, #state{workers = Workers} = State) ->
@@ -305,17 +305,17 @@ handle_info({clean, Name}, #state{pools = Pools, workers = Workers} = State) ->
       if
         Size > InitialSize ->
           Epoch = epoch(),
-          MatchSpec = ets:fun2ms(fun(#worker{pool = Pool, 
-                                             assigned = false, 
-                                             since = Since, 
+          MatchSpec = ets:fun2ms(fun(#worker{pool = Pool,
+                                             assigned = false,
+                                             since = Since,
                                              pid = Pid}) when Pool == Name,
-                                                              Since + MaxAge < Epoch -> 
-                                     Pid 
+                                                              Since + MaxAge < Epoch ->
+                                     Pid
                                  end),
           case ets:select(Workers, MatchSpec) of
             [] -> ok;
             Candidats ->
-              MaxCandidats = if 
+              MaxCandidats = if
                                AssignedSize < InitialSize -> length(Candidats) - (InitialSize - AssignedSize);
                                AssignedSize == InitialSize -> length(Candidats) - 1;
                                true -> length(Candidats)
@@ -338,7 +338,7 @@ handle_info({clean, Name}, #state{pools = Pools, workers = Workers} = State) ->
           ok
       end,
       case ets:update_element(
-             Pools, Name, 
+             Pools, Name,
              {#pool.timer, erlang:send_after(CleanInterval, self(), {clean, Name})}) of
         true ->
           {noreply, State};
@@ -347,15 +347,15 @@ handle_info({clean, Name}, #state{pools = Pools, workers = Workers} = State) ->
       end
   end;
 handle_info(_Info, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 % @hidden
 terminate(_Reason, _State) ->
-	ok.
+  ok.
 
 % @hidden
 code_change(_OldVsn, State, _Extra) ->
-	{ok, State}.
+  {ok, State}.
 
 add_workers(Name, #state{pools = Pools, workers = Workers}) ->
   case ets:lookup(Pools, Name) of

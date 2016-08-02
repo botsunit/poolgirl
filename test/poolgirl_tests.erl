@@ -3,10 +3,10 @@
 -include_lib("eunit/include/eunit.hrl").
 
 poolgirl_test_() ->
-  {setup, 
-   fun() -> 
+  {setup,
+   fun() ->
        application:start(poolgirl)
-   end, 
+   end,
    fun(_) ->
        application:stop(poolgirl)
    end,
@@ -22,11 +22,11 @@ poolgirl_test_() ->
         {ok, W2} = poolgirl:checkout(test0),
         ?assertEqual({ok, 4, 2},
                      poolgirl:size(test0)),
-        ?assertEqual(ok, 
+        ?assertEqual(ok,
                      poolgirl:checkin(W1)),
         ?assertEqual({ok, 4, 3},
                      poolgirl:size(test0)),
-        ?assertEqual(ok, 
+        ?assertEqual(ok,
                      poolgirl:checkin(W2)),
         ?assertEqual({ok, 4, 4},
                      poolgirl:size(test0))

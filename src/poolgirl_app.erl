@@ -6,7 +6,7 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-	poolgirl_sup:start_link().
+  poolgirl_sup:start_link().
 
 stop(_State) ->
-	ok.
+  ok.

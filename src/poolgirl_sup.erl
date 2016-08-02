@@ -10,7 +10,7 @@
 -export([init/1]).
 
 start_link() ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 add_pool(Name, {Module, Function, _}) ->
   case supervisor:start_child(

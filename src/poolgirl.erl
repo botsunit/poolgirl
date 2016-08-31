@@ -379,27 +379,31 @@ add_workers(Name, #state{pools = Pools, workers = Workers}) ->
         true ->
           Epoch = epoch(),
           Size1 = lists:foldl(fun(_, Count) ->
-                                case supervisor:start_child(SupervisorPid, Args) of
-                                  {ok, Pid} ->
-                                    MRef = erlang:monitor(process, Pid),
-                                    ets:insert(Workers, #worker{pool = Name,
-                                                                pid = Pid,
-                                                                mref = MRef,
-                                                                since = Epoch,
-                                                                assigned = false}),
-                                    Count + 1;
-                                  {ok, Pid, _} ->
-                                    MRef = erlang:monitor(process, Pid),
-                                    ets:insert(Workers, #worker{pool = Name,
-                                                                pid = Pid,
-                                                                mref = MRef,
-                                                                since = Epoch,
-                                                                assigned = false}),
-                                    Count + 1;
-                                  {error, _} ->
-                                    Count
-                                end
-
+                                  try
+                                    case supervisor:start_child(SupervisorPid, Args) of
+                                      {ok, Pid} ->
+                                        MRef = erlang:monitor(process, Pid),
+                                        ets:insert(Workers, #worker{pool = Name,
+                                                                    pid = Pid,
+                                                                    mref = MRef,
+                                                                    since = Epoch,
+                                                                    assigned = false}),
+                                        Count + 1;
+                                      {ok, Pid, _} ->
+                                        MRef = erlang:monitor(process, Pid),
+                                        ets:insert(Workers, #worker{pool = Name,
+                                                                    pid = Pid,
+                                                                    mref = MRef,
+                                                                    since = Epoch,
+                                                                    assigned = false}),
+                                        Count + 1;
+                                      {error, _} ->
+                                        Count
+                                    end
+                                  catch
+                                    _:_ ->
+                                      Count
+                                  end
                       end, length(Size), lists:seq(1, AddSize)),
           {ok, Size1}
       end;

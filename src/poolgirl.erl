@@ -8,6 +8,7 @@
          add_pool/3,
          add_pool/2,
          remove_pool/1,
+         remove_pools/1,
          remove_all_pools/0,
          checkout/1,
          checkin/1,
@@ -106,10 +107,10 @@ remove_pool(Name) ->
   gen_server:call(?MODULE, {remove_pool, Name}).
 
 % @doc
-% Remove all existing pools
+% Remove a list of existing pools
 % @end
--spec remove_all_pools() -> ok | [{error, term(), term()}].
-remove_all_pools() ->
+-spec remove_pools([atom()]) -> ok | [{error, term()}].
+remove_pools(Pools) ->
   case lists:filter(fun(E) ->
                         E =/= ok
                     end, [case remove_pool(Pool) of
@@ -117,12 +118,19 @@ remove_all_pools() ->
                               {error, Pool, Reason};
                             Other ->
                               Other
-                          end || Pool <- pools()]) of
+                          end || Pool <- Pools]) of
     [] ->
       ok;
     Other ->
       Other
   end.
+
+% @doc
+% Remove all existing pools
+% @end
+-spec remove_all_pools() -> ok | [{error, term(), term()}].
+remove_all_pools() ->
+  remove_pools(pools()).
 
 % @doc
 % Checkout a worker

@@ -8,9 +8,11 @@
          add_pool/3,
          add_pool/2,
          remove_pool/1,
+         remove_all_pools/0,
          checkout/1,
          checkin/1,
          size/1,
+         pools/0,
          assigned/1,
          transaction/2
         ]).
@@ -104,6 +106,25 @@ remove_pool(Name) ->
   gen_server:call(?MODULE, {remove_pool, Name}).
 
 % @doc
+% Remove all existing pools
+% @end
+-spec remove_all_pools() -> ok | [{error, term(), term()}].
+remove_all_pools() ->
+  case lists:filter(fun(E) ->
+                        E =/= ok
+                    end, [case remove_pool(Pool) of
+                            {error, Reason} ->
+                              {error, Pool, Reason};
+                            Other ->
+                              Other
+                          end || Pool <- pools()]) of
+    [] ->
+      ok;
+    Other ->
+      Other
+  end.
+
+% @doc
 % Checkout a worker
 %
 % Example:
@@ -138,6 +159,18 @@ checkin(Pid) ->
 -spec size(atom()) -> {ok, integer(), integer()} | {error, term()}.
 size(Pool) ->
   gen_server:call(?MODULE, {size, Pool}).
+
+% @doc
+% Return the list of pools
+%
+% Example:
+% <pre>
+% poolgirl:size(test).
+% </pre>
+% @end
+-spec pools() -> [atom()].
+pools() ->
+  gen_server:call(?MODULE, pools).
 
 % @doc
 % Return the list of assigned workers
@@ -274,8 +307,17 @@ handle_call({assigned, Name}, _From, #state{pools = Pools, workers = Workers} = 
       Assigned = ets:match(Workers, #worker{pool = Name, assigned = true, pid = '$1', _='_'}),
       {reply, {ok, lists:flatten(Assigned)}, State}
   end;
+handle_call(pools, _From, #state{pools = Pools} = State) ->
+  Keys = pools(ets:first(Pools), Pools, []),
+  {reply, Keys, State};
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
+
+% @hidden
+pools('$end_of_table', _, Result) ->
+  lists:reverse(Result);
+pools(Pool, Pools, Result) ->
+  pools(ets:next(Pools, Pool), Pools, [Pool|Result]).
 
 % @hidden
 handle_cast(_Msg, State) ->

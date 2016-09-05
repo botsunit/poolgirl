@@ -14,6 +14,7 @@ poolgirl_test_() ->
     fun() ->
         ?assertEqual({ok, 2},
                      poolgirl:add_pool(test0, {sample_worker, start_link, []}, #{size => 2, chunk_size => 2})),
+        ?assertEqual([test0], poolgirl:pools()),
         ?assertEqual({ok, 2, 2},
                      poolgirl:size(test0)),
         {ok, W1} = poolgirl:checkout(test0),
@@ -34,6 +35,7 @@ poolgirl_test_() ->
     fun() ->
         ?assertEqual({ok, 1},
                      poolgirl:add_pool(test1, {sample_worker, start_link, []}, #{size => 1, chunk_size => 1, max_size => 3})),
+        ?assertEqual([test0, test1], poolgirl:pools()),
         ?assertMatch({ok, _}, poolgirl:checkout(test1)),
         ?assertMatch({ok, _}, poolgirl:checkout(test1)),
         {ok, W2} = poolgirl:checkout(test1),
@@ -45,6 +47,7 @@ poolgirl_test_() ->
     fun() ->
         ?assertEqual({ok, 1},
                      poolgirl:add_pool(test2, {sample_worker, start_link, []}, #{size => 1, chunk_size => 1, max_size => 0})),
+        ?assertEqual([test0, test1, test2], poolgirl:pools()),
         ?assertMatch({ok, _}, poolgirl:checkout(test2)),
         {ok, W2} = poolgirl:checkout(test2),
         ?assertEqual({error, no_available_worker}, poolgirl:checkout(test2)),
@@ -55,9 +58,16 @@ poolgirl_test_() ->
     fun() ->
         ?assertEqual({ok, 1},
                      poolgirl:add_pool(test3, {sample_worker, start_link, []}, #{size => 1, chunk_size => 1})),
+        ?assertEqual([test0, test1, test2, test3], poolgirl:pools()),
         [begin
            ?assertMatch({ok, _}, poolgirl:checkout(test3))
          end || _ <- lists:seq(1, 100)]
+    end,
+    fun() ->
+        ?assertEqual(ok, poolgirl:remove_pool(test1)),
+        ?assertEqual([test0, test2, test3], poolgirl:pools()),
+        ?assertEqual(ok, poolgirl:remove_all_pools()),
+        ?assertEqual([], poolgirl:pools())
     end
    ]
   }.

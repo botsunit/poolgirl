@@ -40,8 +40,11 @@ pool_options() = #{size =&gt; integer(), chunk_size =&gt; integer(), max_age =&g
 Create a new pool.</td></tr><tr><td valign="top"><a href="#assigned-1">assigned/1</a></td><td> 
 Return the list of assigned workers.</td></tr><tr><td valign="top"><a href="#checkin-1">checkin/1</a></td><td> 
 Checkin a worker.</td></tr><tr><td valign="top"><a href="#checkout-1">checkout/1</a></td><td> 
-Checkout a worker.</td></tr><tr><td valign="top"><a href="#remove_pool-1">remove_pool/1</a></td><td>
-Remove an existing pool.</td></tr><tr><td valign="top"><a href="#size-1">size/1</a></td><td> 
+Checkout a worker.</td></tr><tr><td valign="top"><a href="#pools-0">pools/0</a></td><td> 
+Return the list of pools.</td></tr><tr><td valign="top"><a href="#remove_all_pools-0">remove_all_pools/0</a></td><td>
+Remove all existing pools.</td></tr><tr><td valign="top"><a href="#remove_pool-1">remove_pool/1</a></td><td>
+Remove an existing pool.</td></tr><tr><td valign="top"><a href="#remove_pools-1">remove_pools/1</a></td><td>
+Remove a list of existing pools.</td></tr><tr><td valign="top"><a href="#size-1">size/1</a></td><td> 
 Get a worker size and number of unassigned workers.</td></tr><tr><td valign="top"><a href="#transaction-2">transaction/2</a></td><td> 
 Checkout a worker from the given pool and execute a function with the worker as parameter.</td></tr></table>
 
@@ -150,6 +153,36 @@ Example:
  W = poolgirl:checkout(test).
 ```
 
+<a name="pools-0"></a>
+
+### pools/0 ###
+
+<pre><code>
+pools() -&gt; [atom()]
+</code></pre>
+<br />
+
+
+Return the list of pools
+
+Example:
+
+```
+
+ poolgirl:size(test).
+```
+
+<a name="remove_all_pools-0"></a>
+
+### remove_all_pools/0 ###
+
+<pre><code>
+remove_all_pools() -&gt; ok | [{error, term(), term()}]
+</code></pre>
+<br />
+
+Remove all existing pools
+
 <a name="remove_pool-1"></a>
 
 ### remove_pool/1 ###
@@ -160,6 +193,17 @@ remove_pool(Name::atom()) -&gt; ok | {error, term()}
 <br />
 
 Remove an existing pool
+
+<a name="remove_pools-1"></a>
+
+### remove_pools/1 ###
+
+<pre><code>
+remove_pools(Pools::[atom()]) -&gt; ok | [{error, term()}]
+</code></pre>
+<br />
+
+Remove a list of existing pools
 
 <a name="size-1"></a>
 

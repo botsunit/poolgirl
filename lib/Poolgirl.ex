@@ -12,6 +12,12 @@ defmodule Poolgirl do
   def unquote(:"remove_pool")(arg1) do
     :erlang.apply(:"poolgirl", :"remove_pool", [arg1])
   end
+  def unquote(:"remove_pools")(arg1) do
+    :erlang.apply(:"poolgirl", :"remove_pools", [arg1])
+  end
+  def unquote(:"remove_all_pools")() do
+    :erlang.apply(:"poolgirl", :"remove_all_pools", [])
+  end
   def unquote(:"checkout")(arg1) do
     :erlang.apply(:"poolgirl", :"checkout", [arg1])
   end
@@ -20,6 +26,9 @@ defmodule Poolgirl do
   end
   def unquote(:"size")(arg1) do
     :erlang.apply(:"poolgirl", :"size", [arg1])
+  end
+  def unquote(:"pools")() do
+    :erlang.apply(:"poolgirl", :"pools", [])
   end
   def unquote(:"assigned")(arg1) do
     :erlang.apply(:"poolgirl", :"assigned", [arg1])

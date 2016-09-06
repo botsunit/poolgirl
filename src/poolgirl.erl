@@ -206,9 +206,14 @@ assigned(Pool) ->
 transaction(Pool, Fun) when is_function(Fun, 1) ->
   case checkout(Pool) of
     {ok, Worker} ->
-      Result = erlang:apply(Fun, [Worker]),
-      _ = checkin(Worker),
-      Result;
+      try
+        erlang:apply(Fun, [Worker])
+      catch
+        Class:Error ->
+          {error, {Class, Error}}
+      after
+        checkin(Worker)
+      end;
     Error ->
       Error
   end.

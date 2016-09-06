@@ -14,6 +14,8 @@ init([]) ->
 
 handle_call(kill, _, State) ->
   {stop, {error, killed}, killed, State};
+handle_call({add, A, B}, _, State) ->
+  {reply, A + B, State};
 handle_call(_, _, State) ->
   {reply, ok, State}.
 
@@ -24,7 +26,6 @@ handle_info(_, State) ->
   {noreply, State}.
 
 terminate(_, _) ->
-  io:format("-------------- TERMINATE ~p~n", [self()]),
   ok.
 
 code_change(_, State, _) ->

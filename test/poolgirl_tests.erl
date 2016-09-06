@@ -64,6 +64,38 @@ poolgirl_test_() ->
          end || _ <- lists:seq(1, 100)]
     end,
     fun() ->
+        ?assertMatch(7,
+                     poolgirl:transaction(
+                       test0,
+                       fun(Worker) ->
+                           gen_server:call(Worker, {add, 4, 3})
+                       end)),
+        ?assertMatch({error,{error,undef}},
+                     poolgirl:transaction(
+                       test0,
+                       fun(Worker) ->
+                           gen_server:invalid_function(Worker)
+                       end)),
+        ?assertMatch(7,
+                     poolgirl:transaction(
+                       test0,
+                       fun(Worker) ->
+                           gen_server:call(Worker, {add, 4, 3})
+                       end)),
+        ?assertMatch(killed,
+                     poolgirl:transaction(
+                       test0,
+                       fun(Worker) ->
+                           gen_server:call(Worker, kill)
+                       end)),
+        ?assertMatch(7,
+                     poolgirl:transaction(
+                       test0,
+                       fun(Worker) ->
+                           gen_server:call(Worker, {add, 4, 3})
+                       end))
+    end,
+    fun() ->
         ?assertEqual(ok, poolgirl:remove_pool(test1)),
         ?assertEqual([test0, test2, test3], poolgirl:pools()),
         ?assertEqual(ok, poolgirl:remove_all_pools()),

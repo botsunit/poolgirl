@@ -70,7 +70,7 @@ poolgirl_test_() ->
                        fun(Worker) ->
                            gen_server:call(Worker, {add, 4, 3})
                        end)),
-        ?assertMatch({error,{error,undef}},
+        ?assertMatch({error, {error, undef}},
                      poolgirl:transaction(
                        test0,
                        fun(Worker) ->

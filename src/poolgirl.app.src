@@ -1,6 +1,6 @@
 {application, poolgirl, [
 	  {description, "Erlang/Elixir worker pool"}
-	, {vsn, "0.1.4"}
+	, {vsn, "0.1.3"}
 	, {modules, []}
 	, {applications, [kernel,stdlib]}
 	, {mod, {poolgirl_app, []}}
@@ -10,6 +10,7 @@
   , {links, [{"Github", "https://github.com/botsunit/poolgirl"}]}
   , {files, ["src/*"
              , "lib/*"
+             , "include/*"
              , "bu.mk"
              , "Makefile"
              , "README.md"

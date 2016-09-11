@@ -14,10 +14,10 @@ start_link() ->
 
 autostart_pools(Result) ->
   [poolgirl:add_pool(Pool) ||
-   {Pool, _} <- doteki:get_env([poolgirl, pools], []), autostart(Pool)],
+   {Pool, Options} <- doteki:get_env([poolgirl, pools], []), autostart(Options)],
   Result.
 
-autostart({_, Options}) ->
+autostart(Options) ->
   case lists:keyfind(autostart, 1, Options) of
     {autostart, true} ->
       case lists:keyfind(start, 1, Options) of

@@ -77,7 +77,7 @@ start_link() ->
 % @end
 -spec add_pool(atom()) -> {ok, integer()} | {error, term()}.
 add_pool(Name) ->
-  case lists:keyfind(Name, 1, doteki:get_env([poolgirl, pools, Name])) of
+  case doteki:get_env([poolgirl, pools, Name], undefined) of
     undefined ->
       {error, missing_pool_configuration};
     Options ->
@@ -283,39 +283,50 @@ handle_call({retry, Name}, _From, #state{pools = Pools} = State) ->
       {reply, {error, pool_failed}, State}
   end;
 handle_call({add_pool, Name, {Module, Function, Args} = MFArgs, Options},
-            _From, #state{pools = Pools, options = CommonOptions} = State) ->
-  PoolOptions = pool_options(Name, Options, CommonOptions),
-  Size = maps:get(size, PoolOptions, ?INITIAL_SIZE),
-  ChunkSize = maps:get(chunk_size, PoolOptions, ?CHUNK_SIZE),
-  MaxAge = maps:get(max_age, PoolOptions, ?MAX_AGE),
-  CleanInterval = maps:get(clean_interval, PoolOptions, ?CLEAN_INTERVAL),
-  MaxSize = case maps:get(max_size, PoolOptions, ?MAX_SIZE) of
-              infinity ->
-                infinity;
-              Max when Max =< (Size + ChunkSize) ->
-                Size + ChunkSize;
-              Max ->
-                Max
-            end,
-  MaxRetry = maps:get(max_retry, PoolOptions, ?MAX_RETRY),
-  RetryInterval = maps:get(retry_interval, PoolOptions, ?RETRY_INTERVAL),
-  case poolgirl_sup:add_pool(Name, MFArgs) of
-    {ok, SupervisorPid} ->
-      ets:insert(Pools, #pool{name = Name,
-                              supervisor = SupervisorPid,
-                              module = Module,
-                              function = Function,
-                              args = Args,
-                              initial_size = Size,
-                              max_age = MaxAge,
-                              max_size = MaxSize,
-                              clean_interval = CleanInterval,
-                              max_retry = MaxRetry,
-                              retry_interval = RetryInterval,
-                              timer = erlang:send_after(CleanInterval, self(), {clean, Name}),
-                              chunk_size = ChunkSize}),
-      {reply, add_workers(Name, State), State};
-    Error -> {reply, Error, State}
+            _From, #state{pools = Pools,
+                          workers = Workers,
+                          options = CommonOptions} = State) ->
+  case ets:lookup(Pools, Name) of
+    [] ->
+      PoolOptions = pool_options(Name, Options, CommonOptions),
+      Size = maps:get(size, PoolOptions, ?INITIAL_SIZE),
+      ChunkSize = maps:get(chunk_size, PoolOptions, ?CHUNK_SIZE),
+      MaxAge = maps:get(max_age, PoolOptions, ?MAX_AGE),
+      CleanInterval = maps:get(clean_interval, PoolOptions, ?CLEAN_INTERVAL),
+      MaxSize = case maps:get(max_size, PoolOptions, ?MAX_SIZE) of
+                  infinity ->
+                    infinity;
+                  Max when Max =< (Size + ChunkSize) ->
+                    Size + ChunkSize;
+                  Max ->
+                    Max
+                end,
+      MaxRetry = maps:get(max_retry, PoolOptions, ?MAX_RETRY),
+      RetryInterval = maps:get(retry_interval, PoolOptions, ?RETRY_INTERVAL),
+      case poolgirl_sup:add_pool(Name, MFArgs) of
+        {ok, SupervisorPid} ->
+          ets:insert(Pools, #pool{name = Name,
+                                  supervisor = SupervisorPid,
+                                  module = Module,
+                                  function = Function,
+                                  args = Args,
+                                  initial_size = Size,
+                                  max_age = MaxAge,
+                                  max_size = MaxSize,
+                                  clean_interval = CleanInterval,
+                                  max_retry = MaxRetry,
+                                  retry_interval = RetryInterval,
+                                  timer = erlang:send_after(CleanInterval, self(), {clean, Name}),
+                                  chunk_size = ChunkSize}),
+          {reply, add_workers(Name, State), State};
+        Error ->
+          {reply, Error, State}
+      end;
+    [#pool{}] ->
+      Size = ets:match(Workers, #worker{pool = Name, _ = '_'}),
+      {reply, {ok, length(Size)}, State};
+    _ ->
+      {reply, {error, pool_failed}, State}
   end;
 handle_call({remove_pool, Name}, _From, #state{pools = Pools} = State) ->
   case ets:lookup(Pools, Name) of

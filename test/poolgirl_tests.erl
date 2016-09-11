@@ -2,15 +2,66 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-define(CONF,
+        [{poolgirl,
+          [
+           {size, 5},
+           {chunk_size, 10},
+           {max_age, 120000},
+           {max_size, infinity},
+           {clean_interval, 60000},
+           {retry_interval, 10},
+           {max_retry, 0},
+           {pools, [
+                    {test00, [
+                              {size, 10},
+                              {chunk_size, 30},
+                              {max_age, 120000},
+                              {max_size, 100},
+                              {clean_interval, 60000}
+                             ]},
+                    {test01, [
+                              {autostart, true},
+                              {start, {sample_worker, start_link, []}},
+                              {size, 5},
+                              {chunk_size, 10},
+                              {max_age, 120000},
+                              {max_size, infinity},
+                              {clean_interval, 60000},
+                              {retry_interval, 100},
+                              {max_retry, 2}
+                             ]},
+                    {test02, [
+                              {autostart, false},
+                              {start, {sample_worker, start_link, []}},
+                              {size, 5},
+                              {chunk_size, 10},
+                              {max_age, 120000},
+                              {max_size, infinity},
+                              {clean_interval, 60000}
+                             ]}
+                   ]}
+          ]
+         }]).
+
 poolgirl_test_() ->
   {setup,
    fun() ->
+       ok = doteki:set_env_from_config(?CONF),
        application:start(poolgirl)
    end,
    fun(_) ->
        application:stop(poolgirl)
    end,
    [
+    fun() ->
+        ?assertEqual([test01], poolgirl:pools()),
+        ?assertMatch({ok, 5}, poolgirl:add_pool(test01)),
+        ?assertEqual({ok, 5}, poolgirl:add_pool(test02)),
+        ?assertEqual({error, missing_mfargs}, poolgirl:add_pool(test00)),
+        ?assertEqual([test01, test02], poolgirl:pools()),
+        ?assertEqual(ok, poolgirl:remove_all_pools())
+    end,
     fun() ->
         ?assertEqual({ok, 2},
                      poolgirl:add_pool(test0, {sample_worker, start_link, []}, #{size => 2, chunk_size => 2})),

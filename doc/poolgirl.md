@@ -28,7 +28,7 @@ mfargs() = {Module::atom(), Function::atom(), Args::list()}
 
 
 <pre><code>
-pool_options() = #{size =&gt; integer(), chunk_size =&gt; integer(), max_age =&gt; integer(), max_size =&gt; integer(), clean_interval =&gt; integer()}
+pool_options() = #{size =&gt; integer(), chunk_size =&gt; integer(), max_age =&gt; integer(), max_size =&gt; integer(), clean_interval =&gt; integer(), retry_interval =&gt; integer(), max_retry =&gt; integer()}
 </code></pre>
 
 <a name="index"></a>
@@ -36,7 +36,8 @@ pool_options() = #{size =&gt; integer(), chunk_size =&gt; integer(), max_age =&g
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_pool-2">add_pool/2</a></td><td>Equivalent to <a href="#add_pool-3"><tt>add_pool(Name, MFArgs, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#add_pool-3">add_pool/3</a></td><td> 
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_pool-1">add_pool/1</a></td><td>
+Start a configured pool.</td></tr><tr><td valign="top"><a href="#add_pool-2">add_pool/2</a></td><td>Equivalent to <a href="#add_pool-3"><tt>add_pool(Name, MFArgs, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#add_pool-3">add_pool/3</a></td><td> 
 Create a new pool.</td></tr><tr><td valign="top"><a href="#assigned-1">assigned/1</a></td><td> 
 Return the list of assigned workers.</td></tr><tr><td valign="top"><a href="#checkin-1">checkin/1</a></td><td> 
 Checkin a worker.</td></tr><tr><td valign="top"><a href="#checkout-1">checkout/1</a></td><td> 
@@ -53,11 +54,25 @@ Checkout a worker from the given pool and execute a function with the worker as 
 
 ## Function Details ##
 
+<a name="add_pool-1"></a>
+
+### add_pool/1 ###
+
+<pre><code>
+add_pool(Name::atom()) -&gt; {ok, integer()} | {error, term()}
+</code></pre>
+<br />
+
+Start a configured pool
+
 <a name="add_pool-2"></a>
 
 ### add_pool/2 ###
 
-`add_pool(Name, MFArgs) -> any()`
+<pre><code>
+add_pool(Name::atom(), MFArgs::<a href="#type-mfargs">mfargs()</a>) -&gt; {ok, integer()} | {error, term()}
+</code></pre>
+<br />
 
 Equivalent to [`add_pool(Name, MFArgs, #{})`](#add_pool-3).
 
@@ -84,6 +99,10 @@ Options :
 * `max_size :: integer()` : Maximum number or worker in the pool (Default: infinity).
 
 * `clean_interval :: integer()` : Interval (in ms) between each cleanup (Default : 60000).
+
+* `max_retry :: integer()` : Number of new attempts to acquire workers if none is available (Default : 0).
+
+* `retry_interval :: integer()` : Interval (in ms) between workers acquisition attempts (Default : 100).
 
 
 _Warning_ : If `max_size =< size + chunk_size` then `max_size` is set to `size + chunk_size`

@@ -10,7 +10,25 @@
 -export([init/1]).
 
 start_link() ->
-  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+  autostart_pools(supervisor:start_link({local, ?MODULE}, ?MODULE, [])).
+
+autostart_pools(Result) ->
+  [poolgirl:add_pool(Pool) ||
+   Pool <- doteki:get_env([poolgirl, pools], []), autostart(Pool)],
+  Result.
+
+autostart({_, Options}) ->
+  case lists:keyfind(autostart, 1, Options) of
+    {autostart, true} ->
+      case lists:keyfind(start, 1, Options) of
+        {start, {_, _, _}} ->
+          true;
+        _ ->
+          false
+      end;
+    _ ->
+      false
+  end.
 
 add_pool(Name, {Module, Function, _}) ->
   case supervisor:start_child(

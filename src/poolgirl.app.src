@@ -1,5 +1,5 @@
 {application, poolgirl, [
-	  {description, "Erlang worker pool"}
+	  {description, "Erlang/Elixir worker pool"}
 	, {vsn, "0.1.3"}
 	, {modules, []}
 	, {applications, [kernel,stdlib]}

@@ -1,12 +1,14 @@
 -module(poolgirl).
 -compile({parse_transform, ms_transform}).
 -behaviour(gen_server).
+-include("../include/poolgirl.hrl").
 
 %% API.
 -export([
          start_link/0,
-         add_pool/3,
+         add_pool/1,
          add_pool/2,
+         add_pool/3,
          remove_pool/1,
          remove_pools/1,
          remove_all_pools/0,
@@ -26,13 +28,8 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
--define(MAX_AGE, 120000).
--define(CLEAN_INTERVAL, 60000).
--define(INITIAL_SIZE, 5).
--define(CHUNK_SIZE, 10).
--define(MAX_SIZE, infinity).
-
 -record(state, {
+          options,
           workers,
           pools
          }).
@@ -56,7 +53,9 @@
           timer,
           max_age,
           max_size,
-          clean_interval
+          clean_interval,
+          max_retry,
+          retry_interval
          }).
 
 -type mfargs() :: {Module :: atom(), Function :: atom(), Args :: list()}.
@@ -64,14 +63,35 @@
                           chunk_size => integer(),
                           max_age => integer(),
                           max_size => integer(),
-                          clean_interval => integer()}.
+                          clean_interval => integer(),
+                          retry_interval => integer(),
+                          max_retry => integer()}.
 
 % @hidden
 -spec start_link() -> {ok, pid()}.
 start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+% @doc
+% Start a configured pool
+% @end
+-spec add_pool(atom()) -> {ok, integer()} | {error, term()}.
+add_pool(Name) ->
+  case lists:keyfind(Name, 1, doteki:get_env([poolgirl, pools, Name])) of
+    undefined ->
+      {error, missing_pool_configuration};
+    Options ->
+      case lists:keyfind(start, 1, Options) of
+        {start, {_, _, _} = MFArgs} ->
+          add_pool(Name, MFArgs, maps:without([autostart, start],
+                                              maps:from_list(Options)));
+        _ ->
+          {error, missing_mfargs}
+      end
+  end.
+
 % @equiv add_pool(Name, MFArgs, #{})
+-spec add_pool(atom(), mfargs()) -> {ok, integer()} | {error, term()}.
 add_pool(Name, MFArgs) ->
   add_pool(Name, MFArgs, #{}).
 
@@ -85,6 +105,8 @@ add_pool(Name, MFArgs) ->
 % <li><tt>max_age :: integer()</tt> : Maximum age (in ms) of unused workers before destruction (Default : 120000).</li>
 % <li><tt>max_size :: integer()</tt> : Maximum number or worker in the pool (Default: infinity).</li>
 % <li><tt>clean_interval :: integer()</tt> : Interval (in ms) between each cleanup (Default : 60000).</li>
+% <li><tt>max_retry :: integer()</tt> : Number of new attempts to acquire workers if none is available (Default : 0).</li>
+% <li><tt>retry_interval :: integer()</tt> : Interval (in ms) between workers acquisition attempts (Default : 100).</li>
 % </ul>
 %
 % <i>Warning</i> : If <tt>max_size =&lt; size + chunk_size</tt> then <tt>max_size</tt> is set to <tt>size + chunk_size</tt>
@@ -95,7 +117,7 @@ add_pool(Name, MFArgs) ->
 %                                                                         chunk_size => 4}).
 % </pre>
 % @end
--spec add_pool(atom(), mfargs() , pool_options()) -> {ok, integer()} | {error, term()}.
+-spec add_pool(atom(), mfargs(), pool_options()) -> {ok, integer()} | {error, term()}.
 add_pool(Name, MFArgs, Options) ->
   gen_server:call(?MODULE, {add_pool, Name, MFArgs, Options}).
 
@@ -142,7 +164,22 @@ remove_all_pools() ->
 % @end
 -spec checkout(atom()) -> {ok, pid()} | {error, term()}.
 checkout(Pool) ->
-  gen_server:call(?MODULE, {checkout, Pool}).
+  case gen_server:call(?MODULE, {retry, Pool}) of
+    {ok, MaxRetry, RetryInterval} ->
+      checkout(Pool, RetryInterval, MaxRetry + 1);
+    Error ->
+      Error
+  end.
+checkout(_, _, 0) ->
+  {error, no_available_worker};
+checkout(Pool, RetryInterval, N) ->
+  case gen_server:call(?MODULE, {checkout, Pool}) of
+    {error, no_available_worker} ->
+      _ = timer:sleep(RetryInterval),
+      checkout(Pool, RetryInterval, N-1);
+    Other ->
+      Other
+  end.
 
 % @doc
 % Checkin a worker
@@ -223,19 +260,36 @@ transaction(Pool, Fun) when is_function(Fun, 1) ->
 % @hidden
 init([]) ->
   {ok, #state{
+          options = #{size => doteki:get_env([poolgirl, size], ?INITIAL_SIZE),
+                      chunk_size => doteki:get_env([poolgirl, chunk_size], ?CHUNK_SIZE),
+                      max_age => doteki:get_env([poolgirl, max_age], ?MAX_AGE),
+                      max_size => doteki:get_env([poolgirl, max_size], ?MAX_SIZE),
+                      clean_interval => doteki:get_env([poolgirl, clean_interval], ?CLEAN_INTERVAL),
+                      retry_interval => doteki:get_env([poolgirl, retry_interval], ?RETRY_INTERVAL),
+                      max_retry => doteki:get_env([poolgirl, max_retry], ?MAX_RETRY)},
           pools = ets:new(pools, [private,
                                   {keypos, #pool.name}]),
           workers = ets:new(workers, [private,
                                       {keypos, #worker.pid}])}}.
 
 % @hidden
+handle_call({retry, Name}, _From, #state{pools = Pools} = State) ->
+  case ets:lookup(Pools, Name) of
+    [] ->
+      {reply, {error, unknow_pool}, State};
+    [#pool{max_retry = MaxRetry, retry_interval = RetryInterval}] ->
+      {reply, {ok, MaxRetry, RetryInterval}, State};
+    _ ->
+      {reply, {error, pool_failed}, State}
+  end;
 handle_call({add_pool, Name, {Module, Function, Args} = MFArgs, Options},
-            _From, #state{pools = Pools} = State) ->
-  Size = maps:get(size, Options, ?INITIAL_SIZE),
-  ChunkSize = maps:get(chunk_size, Options, ?CHUNK_SIZE),
-  MaxAge = maps:get(max_age, Options, ?MAX_AGE),
-  CleanInterval = maps:get(clean_interval, Options, ?CLEAN_INTERVAL),
-  MaxSize = case maps:get(max_size, Options, ?MAX_SIZE) of
+            _From, #state{pools = Pools, options = CommonOptions} = State) ->
+  PoolOptions = pool_options(Name, Options, CommonOptions),
+  Size = maps:get(size, PoolOptions, ?INITIAL_SIZE),
+  ChunkSize = maps:get(chunk_size, PoolOptions, ?CHUNK_SIZE),
+  MaxAge = maps:get(max_age, PoolOptions, ?MAX_AGE),
+  CleanInterval = maps:get(clean_interval, PoolOptions, ?CLEAN_INTERVAL),
+  MaxSize = case maps:get(max_size, PoolOptions, ?MAX_SIZE) of
               infinity ->
                 infinity;
               Max when Max =< (Size + ChunkSize) ->
@@ -243,6 +297,8 @@ handle_call({add_pool, Name, {Module, Function, Args} = MFArgs, Options},
               Max ->
                 Max
             end,
+  MaxRetry = maps:get(max_retry, PoolOptions, ?MAX_RETRY),
+  RetryInterval = maps:get(retry_interval, PoolOptions, ?RETRY_INTERVAL),
   case poolgirl_sup:add_pool(Name, MFArgs) of
     {ok, SupervisorPid} ->
       ets:insert(Pools, #pool{name = Name,
@@ -254,6 +310,8 @@ handle_call({add_pool, Name, {Module, Function, Args} = MFArgs, Options},
                               max_age = MaxAge,
                               max_size = MaxSize,
                               clean_interval = CleanInterval,
+                              max_retry = MaxRetry,
+                              retry_interval = RetryInterval,
                               timer = erlang:send_after(CleanInterval, self(), {clean, Name}),
                               chunk_size = ChunkSize}),
       {reply, add_workers(Name, State), State};
@@ -276,8 +334,11 @@ handle_call({checkout, Name}, _From, #state{pools = Pools, workers = Workers} = 
   case ets:lookup(Pools, Name) of
     [] ->
       {reply, {error, unknow_pool}, State};
-    _ ->
-      case ets:match(Workers, #worker{assigned = false, pool = Name, pid = '$1', _ = '_'}) of
+    [#pool{}] ->
+      case ets:match(Workers, #worker{assigned = false,
+                                      pool = Name,
+                                      pid = '$1',
+                                      _ = '_'}) of
         [] ->
           _ = add_workers(Name, State),
           {reply, {error, no_available_worker}, State};
@@ -289,7 +350,9 @@ handle_call({checkout, Name}, _From, #state{pools = Pools, workers = Workers} = 
             false ->
               {reply, {error, checkout_faild}, State}
           end
-      end
+      end;
+    _ ->
+      {reply, {error, pool_failed}, State}
   end;
 handle_call({checkin, Pid}, _From, #state{workers = Workers} = State) ->
   case ets:lookup(Workers, Pid) of
@@ -465,6 +528,16 @@ add_workers(Name, #state{pools = Pools, workers = Workers}) ->
     _ ->
       {error, unknow_pool}
   end.
+
+pool_options(Pool, Options, CommonOptions) ->
+  ConfigOptions = case doteki:get_env([poolgirl, pools, Pool]) of
+                    undefined ->
+                      #{};
+                    O ->
+                      maps:without([autostart, start],
+                                   maps:from_list(O))
+                  end,
+  maps:merge(maps:merge(CommonOptions, ConfigOptions), Options).
 
 epoch() ->
   {Mega, Sec, Micro} = os:timestamp(),

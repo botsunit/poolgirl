@@ -100,6 +100,59 @@ poolgirl_test_() ->
         ?assertEqual([test0, test2, test3], poolgirl:pools()),
         ?assertEqual(ok, poolgirl:remove_all_pools()),
         ?assertEqual([], poolgirl:pools())
+    end,
+    fun() ->
+        ets:new(test4, [named_table, public, set, {keypos, 1}]),
+        ets:insert(test4, {nb, 0}),
+
+        ?assertEqual({ok, 1},
+                     poolgirl:add_pool(test4, {limited_worker, start_link, [test4, 3]}, #{size => 1, chunk_size => 1})),
+        ?assertMatch({ok, _}, poolgirl:checkout(test4)),
+        ?assertMatch({ok, _}, poolgirl:checkout(test4)),
+        ?assertMatch({ok, _}, poolgirl:checkout(test4)),
+        ?assertMatch({error, no_available_worker}, poolgirl:checkout(test4)),
+        ?assertMatch({ok, 3, 0}, poolgirl:size(test4)),
+
+        poolgirl:remove_pool(test4),
+        ets:delete(test4)
+    end,
+    fun() ->
+        ets:new(test5, [named_table, public, set, {keypos, 1}]),
+        ets:insert(test5, {nb, 0}),
+
+        ?assertEqual({ok, 3},
+                     poolgirl:add_pool(test5, {limited_worker, start_link, [test5, 3]}, #{size => 10, chunk_size => 5})),
+        ?assertMatch({ok, 3, 3}, poolgirl:size(test5)),
+        ?assertMatch({ok, _}, poolgirl:checkout(test5)),
+        ?assertMatch({ok, _}, poolgirl:checkout(test5)),
+        ?assertMatch({ok, _}, poolgirl:checkout(test5)),
+        ?assertMatch({error, no_available_worker}, poolgirl:checkout(test5)),
+        ?assertMatch({ok, 3, 0}, poolgirl:size(test5)),
+
+        poolgirl:remove_pool(test5),
+        ets:delete(test5)
+    end,
+    fun() ->
+        ets:new(test6, [named_table, public, set, {keypos, 1}]),
+        ets:insert(test6, {nb, 0}),
+
+        ?assertEqual({ok, 3},
+                     poolgirl:add_pool(test6, {limited_worker, start_link, [test6, 3]}, #{size => 10, chunk_size => 5, max_retry => 5, retry_interval => 200})),
+        ?assertMatch({ok, 3, 3}, poolgirl:size(test6)),
+        ?assertMatch({ok, _}, poolgirl:checkout(test6)),
+        ?assertMatch({ok, _}, poolgirl:checkout(test6)),
+        {ok, W} = poolgirl:checkout(test6),
+        ?assertMatch({error, no_available_worker}, poolgirl:checkout(test6)),
+        ?assertMatch({ok, 3, 0}, poolgirl:size(test6)),
+        erlang:spawn(fun() ->
+                         timer:sleep(300),
+                         ?assertEqual(ok, poolgirl:checkin(W))
+                     end),
+        ?assertMatch({ok, _}, poolgirl:checkout(test6)),
+        ?assertMatch({ok, 3, 0}, poolgirl:size(test6)),
+
+        poolgirl:remove_pool(test6),
+        ets:delete(test6)
     end
    ]
   }.

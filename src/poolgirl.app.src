@@ -16,6 +16,7 @@
              , "README.md"
              , "rebar.config"
              , "rebar.lock"
-             , "mix.exs"]}
+             , "mix.exs"
+             , "mix.lock"]}
   , {build_tools, ["rebar3", "mix", "make"]}
 ]}.

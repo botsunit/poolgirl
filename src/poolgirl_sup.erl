@@ -14,7 +14,7 @@ start_link() ->
 
 autostart_pools(Result) ->
   [poolgirl:add_pool(Pool) ||
-   Pool <- doteki:get_env([poolgirl, pools], []), autostart(Pool)],
+   {Pool, _} <- doteki:get_env([poolgirl, pools], []), autostart(Pool)],
   Result.
 
 autostart({_, Options}) ->

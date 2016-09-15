@@ -23,7 +23,7 @@ defmodule Poolgirl.Mixfile do
 
   defp deps do
     [
-      {:doteki, "~> 0.1.12"}    
+      {:doteki, "~> 0.1.13"}    
     ]
   end
 

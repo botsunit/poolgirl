@@ -341,7 +341,7 @@ handle_call({remove_pool, Name}, _From, #state{pools = Pools} = State) ->
           {reply, Error, State}
       end
   end;
-handle_call({checkout, Name}, _From, #state{pools = Pools, workers = Workers} = State) ->
+handle_call({checkout, Name}, From, #state{pools = Pools, workers = Workers} = State) ->
   case ets:lookup(Pools, Name) of
     [] ->
       {reply, {error, unknow_pool}, State};
@@ -354,12 +354,24 @@ handle_call({checkout, Name}, _From, #state{pools = Pools, workers = Workers} = 
           _ = add_workers(Name, State),
           {reply, {error, no_available_worker}, State};
         [[Pid]|_] ->
-          case ets:update_element(Workers, Pid, {#worker.assigned, true}) of
+          case erlang:is_process_alive(Pid) of
             true ->
-              _ = add_workers(Name, State),
-              {reply, {ok, Pid}, State};
+              case ets:update_element(Workers, Pid, {#worker.assigned, true}) of
+                true ->
+                  _ = add_workers(Name, State),
+                  {reply, {ok, Pid}, State};
+                false ->
+                  {reply, {error, checkout_faild}, State}
+              end;
             false ->
-              {reply, {error, checkout_faild}, State}
+              case ets:match(Workers, #worker{mref = '$1', pid = Pid, _ = '_'}) of
+                [[MRef]|_] ->
+                  _ = erlang:demonitor(MRef),
+                  _ = ets:delete(Workers, Pid),
+                  handle_call({checkout, Name}, From, State);
+                _ ->
+                  {reply, {error, checkout_faild}, State}
+              end
           end
       end;
     _ ->

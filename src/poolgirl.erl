@@ -457,13 +457,15 @@ handle_info({clean, Name}, #state{pools = Pools, workers = Workers} = State) ->
             [] -> ok;
             Candidats ->
               MaxCandidats = if
-                               AssignedSize < InitialSize -> length(Candidats) - (InitialSize - AssignedSize);
-                               AssignedSize == InitialSize -> length(Candidats) - 1;
-                               true -> length(Candidats)
+                               AssignedSize < InitialSize ->
+                                 length(Candidats) - (InitialSize - AssignedSize);
+                               AssignedSize == InitialSize ->
+                                 length(Candidats) - 1;
+                               true ->
+                                 length(Candidats)
                              end,
               case ChunkSize * (MaxCandidats div ChunkSize) of
-                0 -> ok;
-                CandidatsSize ->
+                CandidatsSize when CandidatsSize > 0 ->
                   Remove = Candidats -- lists:nthtail(CandidatsSize, Candidats),
                   lists:foreach(fun(Pid) ->
                                     case ets:lookup(Workers, Pid) of
@@ -472,7 +474,9 @@ handle_info({clean, Name}, #state{pools = Pools, workers = Workers} = State) ->
                                       _ ->
                                         ok
                                     end
-                                end, Remove)
+                                end, Remove);
+                _ ->
+                  ok
               end
           end;
         true ->

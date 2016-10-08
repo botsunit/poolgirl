@@ -204,6 +204,34 @@ poolgirl_test_() ->
 
         poolgirl:remove_pool(test6),
         ets:delete(test6)
+    end,
+    fun() ->
+        ?assertEqual({ok, 5},
+                     poolgirl:add_pool(test7, {sample_worker, start_link, []},
+                                       #{size => 5, chunk_size => 2, max_retry => 5, retry_interval => 200, max_age => 10, clean_interval => 20})),
+        ?assertMatch({ok, 5, 5}, poolgirl:size(test7)),
+        W = [Pid || {ok, Pid} <- [poolgirl:checkout(test7) || _ <- lists:seq(1, 10)]],
+        ?assertMatch({ok, 11, 1}, poolgirl:size(test7)),
+        timer:sleep(35),
+        ?assertMatch({ok, 11, 1}, poolgirl:size(test7)),
+        [poolgirl:checkin(P) || P <- W],
+        timer:sleep(35),
+        ?assertMatch({ok, 5, 5}, poolgirl:size(test7))
+    end,
+    fun() ->
+        ?assertEqual({ok, 5},
+                     poolgirl:add_pool(test7, {sample_worker, start_link, []},
+                                       #{size => 5, chunk_size => 2, max_retry => 5, retry_interval => 200, max_age => 10, clean_interval => 20})),
+        ?assertMatch({ok, 5, 5}, poolgirl:size(test7)),
+        W = [Pid || {ok, Pid} <- [poolgirl:checkout(test7) || _ <- lists:seq(1, 10)]],
+        {W0, W1} = lists:split(5, W),
+        ?assertMatch({ok, 11, 1}, poolgirl:size(test7)),
+        [poolgirl:checkin(P) || P <- W0],
+        timer:sleep(35),
+        ?assertMatch({ok, 7, 2}, poolgirl:size(test7)),
+        [poolgirl:checkin(P) || P <- W1],
+        timer:sleep(35),
+        ?assertMatch({ok, 5, 5}, poolgirl:size(test7))
     end
    ]
   }.

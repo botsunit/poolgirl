@@ -65,6 +65,7 @@
                           max_size => integer(),
                           clean_interval => integer(),
                           retry_interval => integer(),
+                          allow_empty_pool => true | false,
                           max_retry => integer()}.
 
 % @hidden
@@ -107,6 +108,7 @@ add_pool(Name, MFArgs) ->
 % <li><tt>clean_interval :: integer()</tt> : Interval (in ms) between each cleanup (Default : 60000).</li>
 % <li><tt>max_retry :: integer()</tt> : Number of new attempts to acquire workers if none is available (Default : 0).</li>
 % <li><tt>retry_interval :: integer()</tt> : Interval (in ms) between workers acquisition attempts (Default : 100).</li>
+% <li><tt>allow_empty_pool :: true | false</tt> : If this option is set to true and the pool is empty at start, it is removed (Default: false).</li>
 % </ul>
 %
 % <i>Warning</i> : If <tt>max_size =&lt; size + chunk_size</tt> then <tt>max_size</tt> is set to <tt>size + chunk_size</tt>
@@ -119,7 +121,18 @@ add_pool(Name, MFArgs) ->
 % @end
 -spec add_pool(atom(), mfargs(), pool_options()) -> {ok, integer()} | {error, term()}.
 add_pool(Name, MFArgs, Options) ->
-  gen_server:call(?MODULE, {add_pool, Name, MFArgs, Options}).
+  case gen_server:call(?MODULE, {add_pool, Name, MFArgs, Options}) of
+    {ok, 0} ->
+      case maps:get(allow_empty_pool, Options, false) of
+        false ->
+          remove_pool(Name),
+          {error, timeout};
+        true ->
+          {ok, 0}
+      end;
+    Other ->
+      Other
+  end.
 
 % @doc
 % Remove an existing pool
@@ -561,7 +574,7 @@ pool_options(Pool, Options, CommonOptions) ->
                     undefined ->
                       #{};
                     O ->
-                      maps:without([autostart, start],
+                      maps:without([autostart, start, allow_empty_pool],
                                    maps:from_list(O))
                   end,
   maps:merge(maps:merge(CommonOptions, ConfigOptions), Options).

@@ -28,7 +28,7 @@ mfargs() = {Module::atom(), Function::atom(), Args::list()}
 
 
 <pre><code>
-pool_options() = #{size =&gt; integer(), chunk_size =&gt; integer(), max_age =&gt; integer(), max_size =&gt; integer(), clean_interval =&gt; integer(), retry_interval =&gt; integer(), max_retry =&gt; integer()}
+pool_options() = #{size =&gt; integer(), chunk_size =&gt; integer(), max_age =&gt; integer(), max_size =&gt; integer(), clean_interval =&gt; integer(), retry_interval =&gt; integer(), allow_empty_pool =&gt; true | false, max_retry =&gt; integer()}
 </code></pre>
 
 <a name="index"></a>
@@ -103,6 +103,8 @@ Options :
 * `max_retry :: integer()` : Number of new attempts to acquire workers if none is available (Default : 0).
 
 * `retry_interval :: integer()` : Interval (in ms) between workers acquisition attempts (Default : 100).
+
+* `allow_empty_pool :: true | false` : If this option is set to true and the pool is empty at start, it is removed (Default: false).
 
 
 _Warning_ : If `max_size =< size + chunk_size` then `max_size` is set to `size + chunk_size`

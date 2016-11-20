@@ -1,6 +1,6 @@
 {application, poolgirl, [
 	  {description, "Erlang/Elixir worker pool"}
-	, {vsn, "1.0.3"}
+	, {vsn, "1.0.4"}
 	, {modules, []}
 	, {applications, [kernel,stdlib]}
 	, {mod, {poolgirl_app, []}}

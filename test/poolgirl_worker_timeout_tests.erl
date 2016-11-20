@@ -1,4 +1,4 @@
--module(poolgirl_error_tests).
+-module(poolgirl_worker_timeout_tests).
 -include_lib("eunit/include/eunit.hrl").
 
 -define(CONF,
@@ -24,13 +24,14 @@ poolgirl_error_tests_test_() ->
        application:stop(poolgirl)
    end,
    [
-    {timeout, 120,
+    {timeout, 360,
      fun() ->
          ?assertEqual([], poolgirl:pools()),
-         ?assertException(exit, {timeout, _},
+         ?assertEqual({ok, 1},
                       poolgirl:add_pool(failed,
                                         {failed_worker, start_link, []},
                                         #{size => 1,
-                                          chunk_size => 1}))
+                                          chunk_size => 1,
+                                          worker_timeout => 15000}))
      end}
    ]}.

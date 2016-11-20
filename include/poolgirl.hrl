@@ -6,5 +6,6 @@
 -define(RETRY_INTERVAL, 100).
 -define(MAX_RETRY, 0).
 -define(AUTOSTART_POOL, false).
-
+-define(ALLOW_EMPTY_POOL, false).
+-define(WORKER_TIMEOUT, 5000).
 

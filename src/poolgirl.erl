@@ -109,6 +109,7 @@ add_pool(Name, MFArgs) ->
 % <li><tt>max_retry :: integer()</tt> : Number of new attempts to acquire workers if none is available (Default : 0).</li>
 % <li><tt>retry_interval :: integer()</tt> : Interval (in ms) between workers acquisition attempts (Default : 100).</li>
 % <li><tt>allow_empty_pool :: true | false</tt> : If this option is set to true and the pool is empty at start, it is removed (Default: false).</li>
+% <li><tt>worker_timeout :: integer()</tt> : Integer greater than zero that specifies how many milliseconds to wait for each worker to start (Default: 5000).</li>
 % </ul>
 %
 % <i>Warning</i> : If <tt>max_size =&lt; size + chunk_size</tt> then <tt>max_size</tt> is set to <tt>size + chunk_size</tt>
@@ -121,7 +122,10 @@ add_pool(Name, MFArgs) ->
 % @end
 -spec add_pool(atom(), mfargs(), pool_options()) -> {ok, integer()} | {error, term()}.
 add_pool(Name, MFArgs, Options) ->
-  case gen_server:call(?MODULE, {add_pool, Name, MFArgs, Options}) of
+  #{worker_timeout := Timeout,
+    size := Size,
+    chunk_size := _ChunkSize} = gen_server:call(?MODULE, {options, Name, Options}),
+  case gen_server:call(?MODULE, {add_pool, Name, MFArgs, Options}, Timeout * Size) of
     {ok, 0} ->
       case maps:get(allow_empty_pool, Options, false) of
         false ->
@@ -279,6 +283,8 @@ init([]) ->
                       max_size => doteki:get_env([poolgirl, max_size], ?MAX_SIZE),
                       clean_interval => doteki:get_env([poolgirl, clean_interval], ?CLEAN_INTERVAL),
                       retry_interval => doteki:get_env([poolgirl, retry_interval], ?RETRY_INTERVAL),
+                      allow_empty_pool => doteki:get_env([poolgirl, allow_empty_pool], ?ALLOW_EMPTY_POOL),
+                      worker_timeout => doteki:get_env([poolgirl, worker_timeout], ?WORKER_TIMEOUT),
                       max_retry => doteki:get_env([poolgirl, max_retry], ?MAX_RETRY)},
           pools = ets:new(pools, [private,
                                   {keypos, #pool.name}]),
@@ -422,6 +428,10 @@ handle_call({assigned, Name}, _From, #state{pools = Pools, workers = Workers} = 
 handle_call(pools, _From, #state{pools = Pools} = State) ->
   Keys = pools(ets:first(Pools), Pools, []),
   {reply, Keys, State};
+handle_call({options, Name, Options}, _From, #state{options = CommonOptions} = State) ->
+  {reply,
+   pool_options(Name, Options, CommonOptions),
+   State};
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
 
@@ -574,7 +584,7 @@ pool_options(Pool, Options, CommonOptions) ->
                     undefined ->
                       #{};
                     O ->
-                      maps:without([autostart, start, allow_empty_pool],
+                      maps:without([autostart, start],
                                    maps:from_list(O))
                   end,
   maps:merge(maps:merge(CommonOptions, ConfigOptions), Options).

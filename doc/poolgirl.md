@@ -106,6 +106,8 @@ Options :
 
 * `allow_empty_pool :: true | false` : If this option is set to true and the pool is empty at start, it is removed (Default: false).
 
+* `worker_timeout :: integer()` : Integer greater than zero that specifies how many milliseconds to wait for each worker to start (Default: 5000).
+
 
 _Warning_ : If `max_size =< size + chunk_size` then `max_size` is set to `size + chunk_size`
 

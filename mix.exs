@@ -8,8 +8,8 @@ defmodule Poolgirl.Mixfile do
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
-      deps: deps,
-      aliases: aliases
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -23,7 +23,7 @@ defmodule Poolgirl.Mixfile do
 
   defp deps do
     [
-      {:doteki, "~> 1.0.3"}    
+      {:doteki, "~> 1.0.5"}    
     ]
   end
 

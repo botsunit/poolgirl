@@ -4,7 +4,7 @@ defmodule Poolgirl.Mixfile do
   def project do
     [
       app: :poolgirl,
-      version: "1.1.2",
+      version: "1.1.3",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
